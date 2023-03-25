@@ -194,6 +194,7 @@ class GraphTraversal
                 if( neighbor.node.isVisited != true)
                 {
                     st.push(neighbor.node);
+                    neighbor.node.parent = v;
                     neighbor.node.isVisited = true;
                 }
             }
