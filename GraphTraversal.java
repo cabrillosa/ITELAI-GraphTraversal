@@ -14,9 +14,11 @@
 //      +displayAdjacencyList            - Display adjacency list.
 //      +breadthFirstSearch              - Traverse the map using BFS
 //      +depththFirstSearch              - Traverse the map using DFS
+//      +greedyBestFirstSearch           - Traverse the map using greedy best first search alg
 //  Utility:
 //      -getNodeByName                   - search the map using the string name
 //      -reconstruct_path                - reconstruct the solution/path
+//      -getLowestFScore                 - get the lowest fscore in a given list of nodes
 //  Attributes:
 //      -graph(LinkedList<Node>)         - Number of places/vertices in the map.
 
@@ -28,6 +30,8 @@
 // tag  Reason   Ver  Rev Date       Author      Description.
 //------------------------------------------------------------------------
 // $000 -------  0.1  001 2023-03-25 cabrillosa  First Release.
+// $001 -------  0.5  002 2023-04-29 cabrillosa  Added Greedy BFS and A*
+
 import java.util.*;
 class GraphTraversal 
 {
@@ -51,10 +55,12 @@ class GraphTraversal
     //  Method Name : addPlace
     //  Description : Adds a place in string format.
     //  Arguments   : String place
+    //                float h
     //  Return      : void
     //------------------------------------------------------------------------
-    public void addPlace(String name) {
+    public void addPlace(String name, float h) {
         Node newnode = new Node(name.toLowerCase());
+        newnode.h = h;
         graph.add(newnode);
     }
     
@@ -63,12 +69,12 @@ class GraphTraversal
     //  Description : Connect one vertex to another vertex.
     //  Arguments   : string v1
     //                string v2
-    //                int dist
+    //                float distance
     //  Return      : 0 (OK)
     //               -1 (NG - place is not in the list)
     //------------------------------------------------------------------------
 
-    public int connect(String place1, String place2) 
+    public int connect(String place1, String place2, float distance) 
     {
         Node p1 = getNodeByName(place1.toLowerCase());
         Node p2 = getNodeByName(place2.toLowerCase());
@@ -78,8 +84,8 @@ class GraphTraversal
             return -1;
         } else { /* nothing todo */ }
 
-        p1.addNeighbor(p2);
-        p2.addNeighbor(p1);
+        p1.addNeighbor(p2, distance);
+        p2.addNeighbor(p1, distance);
 
         return 0;
     }
@@ -205,6 +211,108 @@ class GraphTraversal
 
     }
 
+    //------------------------------------------------------------------------
+    //  Method Name : depththFirstSearch
+    //  Description : Traverse the map using BFS
+    //  Arguments   : String s
+    //                String g
+    //  Return      : Void
+    //------------------------------------------------------------------------
+    public void greedyBestFirstSearch(String start_place, String goal_place)
+    {
+        Node start = getNodeByName(start_place);
+        PriorityQueue<Node> pq = new PriorityQueue<Node>();
+
+        if (start == null) {
+            System.out.println("Enter a valid start node!");
+        } else {}
+
+        start.f = start.h;
+        start.isVisited = true;
+        pq.add(start);
+
+        while(pq.size() > 0) {
+            Node current = pq.poll();
+            current.isVisited = true;
+
+            if(current.name == goal_place.toLowerCase()) {
+                reconstruct_path(current);
+                unvisit();
+                return;
+            }
+
+            Iterator<Neighbor> neighbor_ite = current.neighbors.iterator();
+            while(neighbor_ite.hasNext()) {
+                Neighbor n = neighbor_ite.next();
+                
+                if(n.node.isVisited != true) {
+                    n.node.parent = current;
+                    n.node.f = n.node.h;
+                    pq.add(n.node);
+                }
+            }
+        }
+        System.out.println("No solution!");
+        unvisit();
+    }
+
+    //------------------------------------------------------------------------
+    //  Method Name : aStar
+    //  Description : Traverse the map using aStar
+    //  Arguments   : String s
+    //                String g
+    //  Return      : Void
+    //------------------------------------------------------------------------
+    public void aStar(String start_place, String goal_place)
+    {
+        Node start = getNodeByName(start_place);
+
+        LinkedList<Node> openlist = new LinkedList<Node>();
+        LinkedList<Node> closedlist = new LinkedList<Node>();
+
+        start.f = start.g + start.h;
+        openlist.add(start);
+
+        while(openlist.size() > 0) {
+            Node current = getLowestFScore(openlist);
+
+            if(current.name == goal_place.toLowerCase()) {
+                //solution found
+                System.out.println("Final fscore = "+ current.f);
+                reconstruct_path(current);
+                return;
+            } else {}
+
+            Iterator<Neighbor> neighbor_ite = current.neighbors.iterator();
+
+            while(neighbor_ite.hasNext()) {
+                Neighbor m = neighbor_ite.next();
+                float gtotal = current.g + m.distance;
+
+                if(!closedlist.contains(m.node) && !openlist.contains(m.node)) {
+                    m.node.parent = current;
+                    m.node.g = gtotal;
+                    m.node.f = m.node.g + m.node.h;
+                    openlist.add(m.node);
+                } else {
+                    if(gtotal < m.node.g) {
+                        m.node.parent = current;
+                        m.node.g = gtotal;
+                        m.node.f = m.node.g + m.node.h;
+
+                        if (closedlist.contains(m.node)){
+                            openlist.add(m.node);
+                        }
+                    }
+                }
+            }
+            openlist.remove(current);
+            closedlist.add(current);
+        }
+        System.out.println("No path to goal!");
+    }
+
+    
     //UTILITY FUNCTIONS
 
     //------------------------------------------------------------------------
@@ -270,5 +378,21 @@ class GraphTraversal
         }
 
         System.out.println();
+    }
+
+    public Node getLowestFScore(LinkedList<Node> list) {
+        Iterator<Node> node_ite = list.iterator();
+        
+        node_ite.hasNext();
+        Node lowest = node_ite.next();
+
+        while(node_ite.hasNext()) {
+            Node temp = node_ite.next();
+            if(lowest.f > temp.f) {
+                lowest = temp;
+            }
+        }
+
+        return lowest;
     }
 }
